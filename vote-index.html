@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BallotBox — On-Chain Voting DApp</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#faf6ee;
+    --paper-dark:#efe8d8;
+    --ink:#241c15;
+    --maroon:#7a2331;
+    --maroon-bright:#9c2f3f;
+    --seal:#1f5c46;
+    --muted:#8a7f6b;
+    --line:#d9cfb8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper-dark);
+    background-image: radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0);
+    background-size: 22px 22px;
+    color:var(--ink);
+    font-family: 'Georgia', 'Times New Roman', serif;
+    min-height:100vh;
+  }
+  .wrap{ max-width:900px; margin:0 auto; padding:44px 22px 80px; }
+
+  header{
+    text-align:center;
+    padding-bottom:26px;
+    margin-bottom:32px;
+    border-bottom:3px double var(--maroon);
+  }
+  .seal{
+    display:inline-block;
+    width:52px; height:52px;
+    border:2px solid var(--seal);
+    border-radius:50%;
+    line-height:48px;
+    color:var(--seal);
+    font-size:22px;
+    margin-bottom:10px;
+  }
+  header .eyebrow{
+    text-transform:uppercase;
+    letter-spacing:4px;
+    font-size:11px;
+    color:var(--maroon);
+    margin:0 0 6px;
+    font-family: Arial, sans-serif;
+  }
+  header h1{ margin:0; font-size:36px; letter-spacing:0.5px; }
+  header .sub{
+    margin:8px auto 0;
+    max-width:46ch;
+    font-size:13px;
+    color:var(--muted);
+    font-family: Arial, sans-serif;
+  }
+
+  #walletBar{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:14px;
+    margin-top:18px;
+    font-family: Arial, sans-serif;
+    font-size:12px;
+  }
+  #connectBtn{
+    background:var(--maroon);
+    color:var(--paper);
+    border:none;
+    font-family:inherit;
+    font-weight:bold;
+    font-size:13px;
+    padding:11px 22px;
+    cursor:pointer;
+    letter-spacing:0.5px;
+    border-radius:2px;
+  }
+  #connectBtn:hover{ background:var(--maroon-bright); }
+  #connectBtn:disabled{ background:var(--muted); cursor:default; }
+  .status-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--muted); margin-right:5px; }
+  .status-dot.on{ background:var(--seal); }
+  #acctText span{ color:var(--maroon); font-weight:bold; }
+
+  .config-note{
+    font-family: Arial, sans-serif;
+    font-size:11px;
+    color:var(--maroon);
+    background:#fff8ec;
+    border:1px dashed var(--maroon);
+    padding:10px 12px;
+    margin-bottom:28px;
+    border-radius:2px;
+  }
+  .config-note code{ background:var(--paper-dark); padding:1px 4px; }
+
+  .panel{
+    background:var(--paper);
+    border:1px solid var(--line);
+    box-shadow: 5px 5px 0 rgba(122,35,49,0.12);
+    padding:28px;
+    margin-bottom:26px;
+    border-radius:2px;
+  }
+  .panel .label{
+    font-family: Arial, sans-serif;
+    text-transform:uppercase;
+    font-size:11px;
+    letter-spacing:2px;
+    color:var(--seal);
+    margin-bottom:8px;
+  }
+  .panel h2{ margin:0 0 4px; font-size:20px; }
+  .panel p.desc{ margin:0 0 20px; font-size:13px; color:var(--muted); font-family: Arial, sans-serif; }
+
+  .candidate-row{
+    display:grid;
+    grid-template-columns: 26px 1fr auto 100px;
+    align-items:center;
+    gap:14px;
+    padding:14px 0;
+    border-top:1px dashed var(--line);
+  }
+  .candidate-row:first-of-type{ border-top:none; }
+  .cand-num{
+    font-family: Arial, sans-serif;
+    font-size:12px;
+    color:var(--muted);
+    text-align:right;
+  }
+  .cand-name{ font-size:16px; font-weight:bold; }
+  .cand-bar-wrap{
+    grid-column: 1 / -1;
+    background:var(--paper-dark);
+    height:10px;
+    border-radius:5px;
+    overflow:hidden;
+    margin-top:-6px;
+  }
+  .cand-bar{
+    height:100%;
+    background: linear-gradient(90deg, var(--seal), #2f8064);
+    width:0%;
+    transition:width 0.5s ease;
+  }
+  .cand-votes{
+    font-family: Arial, sans-serif;
+    font-size:12px;
+    color:var(--muted);
+    text-align:right;
+  }
+  button.vote-btn{
+    background:var(--maroon);
+    color:var(--paper);
+    border:none;
+    font-family: Arial, sans-serif;
+    font-weight:bold;
+    font-size:12px;
+    padding:9px 16px;
+    cursor:pointer;
+    border-radius:2px;
+    letter-spacing:0.3px;
+  }
+  button.vote-btn:hover{ background:var(--maroon-bright); }
+  button.vote-btn:disabled{ background:var(--muted); cursor:default; }
+  .voted-tag{
+    font-family: Arial, sans-serif;
+    font-size:11px;
+    color:var(--seal);
+    font-weight:bold;
+    text-align:right;
+  }
+
+  .msg{
+    font-family: Arial, sans-serif;
+    font-size:13px;
+    padding:10px 12px;
+    margin-top:16px;
+    border-left:3px solid var(--maroon);
+    background:#fff8ec;
+    display:none;
+  }
+  .msg.error{ border-color:#a4453a; color:#a4453a; }
+  .msg.success{ border-color:var(--seal); color:var(--seal); }
+  .msg.show{ display:block; }
+
+  .winner-box{
+    text-align:center;
+    padding:20px;
+    background:#fff8ec;
+    border:1px solid var(--line);
+  }
+  .winner-box .crown{ font-size:26px; }
+  .winner-box .name{ font-size:22px; font-weight:bold; color:var(--maroon); margin:6px 0 2px; }
+  .winner-box .count{ font-family: Arial, sans-serif; font-size:12px; color:var(--muted); }
+
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:11px;
+    margin-top:36px;
+    font-family: Arial, sans-serif;
+    letter-spacing:1px;
+    text-transform:uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="seal">⚖</div>
+    <p class="eyebrow">Assignment V · DApp</p>
+    <h1>BallotBox</h1>
+    <p class="sub">A transparent, tamper-proof voting DApp. Every vote is a blockchain transaction — publicly verifiable, cast once per wallet.</p>
+    <div id="walletBar">
+      <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+      <div id="acctText"><span class="status-dot" id="statusDot"></span><span id="acctLabel">Not connected</span></div>
+    </div>
+  </header>
+
+  <div class="config-note">
+    ⚠ Deploy <code>BallotBox.sol</code> first (constructor takes your list of
+    candidate names), then paste the deployed <code>CONTRACT_ADDRESS</code>
+    into the <code>&lt;script&gt;</code> block below. See README, Step 2.
+  </div>
+
+  <section class="panel">
+    <p class="label">Vote</p>
+    <h2>Cast your vote</h2>
+    <p class="desc">Calls <code>vote(candidateId)</code>. One vote per wallet address — enforced on-chain, not just in this UI.</p>
+    <div id="candidateList">
+      <p style="font-family:Arial, sans-serif; font-size:13px; color:var(--muted);">Connect your wallet to load candidates.</p>
+    </div>
+    <div class="msg" id="voteMsg"></div>
+  </section>
+
+  <section class="panel">
+    <p class="label">Results</p>
+    <h2>Current leader</h2>
+    <p class="desc">Calls <code>getWinner()</code> — a free, real-time on-chain tally.</p>
+    <div id="winnerBox" class="winner-box">
+      <p style="font-family:Arial, sans-serif; font-size:13px; color:var(--muted); margin:0;">Connect your wallet and refresh to see results.</p>
+    </div>
+    <div style="text-align:center; margin-top:14px;">
+      <button class="vote-btn" onclick="loadCandidates()">Refresh Results</button>
+    </div>
+  </section>
+
+  <footer>BallotBox DApp · Built for Assignment V · Frontend + Smart Contract + MetaMask</footer>
+</div>
+
+<script>
+  // ============================================================
+  // STEP 2 CONFIG — replace with your own deployed contract info
+  // ============================================================
+  const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+
+  const CONTRACT_ABI = [
+    "function vote(uint256 _candidateId) external",
+    "function addCandidate(string calldata _name) external",
+    "function closeVoting() external",
+    "function getCandidateCount() external view returns (uint256)",
+    "function getCandidate(uint256 _candidateId) external view returns (string memory name, uint256 voteCount)",
+    "function getWinner() external view returns (string memory name, uint256 voteCount)",
+    "function hasVoted(address) external view returns (bool)",
+    "function votedFor(address) external view returns (uint256)",
+    "function votingOpen() external view returns (bool)",
+    "event Voted(address indexed voter, uint256 indexed candidateId, uint256 newVoteCount)"
+  ];
+  // ============================================================
+
+  let provider, signer, contract, currentAccount = null;
+
+  function showMsg(id, text, type){
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'msg show ' + type;
+  }
+
+  async function connectWallet(){
+    if (typeof window.ethereum === 'undefined'){
+      alert('MetaMask not detected. Please install the MetaMask browser extension.');
+      return;
+    }
+    try{
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      currentAccount = accounts[0];
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      document.getElementById('acctLabel').innerHTML =
+        '<span>' + currentAccount.slice(0,6) + '...' + currentAccount.slice(-4) + '</span>';
+      document.getElementById('statusDot').classList.add('on');
+      document.getElementById('connectBtn').textContent = 'Connected';
+      document.getElementById('connectBtn').disabled = true;
+
+      window.ethereum.on('accountsChanged', () => window.location.reload());
+      window.ethereum.on('chainChanged', () => window.location.reload());
+
+      loadCandidates();
+    }catch(err){
+      console.error(err);
+      alert('Connection was rejected or failed: ' + (err.message || err));
+    }
+  }
+
+  async function castVote(candidateId){
+    if (!contract){ showMsg('voteMsg', 'Connect your wallet first.', 'error'); return; }
+
+    try{
+      const alreadyVoted = await contract.hasVoted(currentAccount);
+      if (alreadyVoted){
+        showMsg('voteMsg', 'This wallet has already voted.', 'error');
+        return;
+      }
+    }catch(err){ /* fall through to tx attempt */ }
+
+    const btn = document.getElementById('vote-btn-' + candidateId);
+    if (btn){ btn.disabled = true; btn.textContent = 'Confirm in MetaMask...'; }
+
+    try{
+      const tx = await contract.vote(candidateId);
+      if (btn) btn.textContent = 'Mining transaction...';
+      await tx.wait();
+      showMsg('voteMsg', 'Vote recorded on-chain! Tx hash: ' + tx.hash, 'success');
+      loadCandidates();
+    }catch(err){
+      console.error(err);
+      showMsg('voteMsg', 'Vote failed: ' + (err.reason || err.message || err), 'error');
+      if (btn){ btn.disabled = false; btn.textContent = 'Vote'; }
+    }
+  }
+
+  async function loadCandidates(){
+    const listEl = document.getElementById('candidateList');
+    const winnerEl = document.getElementById('winnerBox');
+    if (!contract){
+      listEl.innerHTML = '<p style="font-family:Arial, sans-serif; font-size:13px; color:var(--muted);">Connect your wallet first.</p>';
+      return;
+    }
+    try{
+      const count = (await contract.getCandidateCount()).toNumber();
+      const alreadyVoted = await contract.hasVoted(currentAccount);
+      const votedIndex = alreadyVoted ? (await contract.votedFor(currentAccount)).toNumber() : -1;
+
+      let candidates = [];
+      let maxVotes = 0;
+      for (let i = 0; i < count; i++){
+        const c = await contract.getCandidate(i);
+        const votes = c.voteCount.toNumber ? c.voteCount.toNumber() : Number(c.voteCount);
+        candidates.push({ name: c.name, votes });
+        if (votes > maxVotes) maxVotes = votes;
+      }
+
+      let html = '';
+      candidates.forEach((c, i) => {
+        const pct = maxVotes > 0 ? Math.round((c.votes / maxVotes) * 100) : 0;
+        const isVotedFor = (i === votedIndex);
+        html += `<div class="candidate-row">
+          <div class="cand-num">${i + 1}.</div>
+          <div class="cand-name">${c.name}</div>
+          <div>${
+            alreadyVoted
+              ? (isVotedFor ? '<span class="voted-tag">✓ Your vote</span>' : '')
+              : `<button class="vote-btn" id="vote-btn-${i}" onclick="castVote(${i})">Vote</button>`
+          }</div>
+          <div class="cand-votes">${c.votes} vote${c.votes === 1 ? '' : 's'}</div>
+          <div class="cand-bar-wrap"><div class="cand-bar" style="width:${pct}%"></div></div>
+        </div>`;
+      });
+      listEl.innerHTML = html;
+
+      if (candidates.length > 0){
+        const winner = await contract.getWinner();
+        const wVotes = winner.voteCount.toNumber ? winner.voteCount.toNumber() : Number(winner.voteCount);
+        winnerEl.innerHTML = `
+          <div class="crown">🏆</div>
+          <div class="name">${winner.name}</div>
+          <div class="count">${wVotes} vote${wVotes === 1 ? '' : 's'} so far</div>`;
+      }
+    }catch(err){
+      console.error(err);
+      listEl.innerHTML = '<p style="font-family:Arial, sans-serif; font-size:13px; color:#a4453a;">Could not load candidates: ' + (err.message || err) + '</p>';
+    }
+  }
+</script>
+</body>
+</html>
