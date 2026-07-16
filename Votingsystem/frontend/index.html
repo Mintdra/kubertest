@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BallotBox — On-Chain Voting DApp</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="seal">⚖</div>
+    <!-- <p class="eyebrow">Assignment V · DApp</p> -->
+    <h1>Voting</h1>
+    <!-- <p class="sub">A transparent, tamper-proof voting DApp. Every vote is a blockchain transaction — publicly verifiable, cast once per wallet.</p> -->
+    <div id="walletBar">
+      <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+      <div id="acctText"><span class="status-dot" id="statusDot"></span><span id="acctLabel">Not connected</span></div>
+    </div>
+  </header>
+
+  <!-- <div class="config-note">
+    ⚠ Deploy <code>BallotBox.sol</code> first (constructor takes your list of
+    candidate names), then paste the deployed <code>CONTRACT_ADDRESS</code>
+    into the <code>&lt;script&gt;</code> block below. See README, Step 2.
+  </div> -->
+
+  <section class="panel">
+    <p class="label">Vote</p>
+    <h2>Cast your vote</h2>
+    <!-- <p class="desc">Calls <code>vote(candidateId)</code>. One vote per wallet address — enforced on-chain, not just in this UI.</p> -->
+    <div id="candidateList">
+      <!-- <p style="font-family:Arial, sans-serif; font-size:13px; color:var(--muted);">Connect your wallet to load candidates.</p> -->
+    </div>
+    <div class="msg" id="voteMsg"></div>
+  </section>
+
+  <section class="panel">
+    <p class="label">Results</p>
+    <h2>Current leader</h2>
+    <!-- <p class="desc">Calls <code>getWinner()</code> — a free, real-time on-chain tally.</p> -->
+    <div id="winnerBox" class="winner-box">
+      <p style="font-family:Arial, sans-serif; font-size:13px; color:var(--muted); margin:0;">Connect your wallet and refresh to see results.</p>
+    </div>
+    <div style="text-align:center; margin-top:14px;">
+      <button class="vote-btn" onclick="loadCandidates()">Refresh Results</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <p class="label">Backend</p>
+    <h2>Recent activity</h2>
+    <p class="desc" style="font-family:Arial, sans-serif; font-size:13px; color:var(--muted); margin:0 0 16px;">Powered by the backend's cached vote log — pulled from <code>/api/votes</code>, not read directly from the blockchain.</p>
+    <div id="activityList">
+      <p style="font-family:Arial, sans-serif; font-size:13px; color:var(--muted);">Connect your wallet to load recent activity.</p>
+    </div>
+    <div style="text-align:center; margin-top:14px;">
+      <button class="vote-btn" onclick="loadRecentActivity()">Refresh Activity</button>
+    </div>
+  </section>
+
+  <footer>Bombaclaat Wallahi!!!!!!!!!!!!!!!!!!!!!!</footer>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
